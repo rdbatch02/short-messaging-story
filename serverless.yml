@@ -1,0 +1,176 @@
+service: short-messaging-story
+
+frameworkVersion: ">=1.1.0 <2.0.0"
+
+provider:
+  name: aws
+  region: us-east-1
+  stage: dev
+  runtime: python3.6
+  memorySize: 192
+  environment:
+    STAGE_TABLE: ${self:service}-stage-${opt:stage, self:provider.stage}
+    USER_TABLE: ${self:service}-user-${opt:stage, self:provider.stage}
+    EVENT_TABLE: ${self:service}-events-${opt:stage, self:provider.stage}
+    TWILIO_SID: ${ssm:TWILIO_SID}
+    TWILIO_AUTH_TOKEN: ${ssm:TWILIO_AUTH_TOKEN}
+    TWILIO_SOURCE_PHONE: ${ssm:TWILIO_SOURCE_PHONE}
+    SEND_SMS_QUEUE_NAME: "SendSMSQueue"
+    STORY_PROCESSOR_QUEUE_NAME: "StoryProcessorQueue"
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource:
+        - "arn:aws:dynamodb:${opt:region, self:provider.region}:#{AWS::AccountId}:table/${self:provider.environment.STAGE_TABLE}"
+        - "arn:aws:dynamodb:${opt:region, self:provider.region}:#{AWS::AccountId}:table/${self:provider.environment.USER_TABLE}"
+        - "arn:aws:dynamodb:${opt:region, self:provider.region}:#{AWS::AccountId}:table/${self:provider.environment.EVENT_TABLE}"
+    - Effect: "Allow"
+      Action:
+        - sqs:SendMessage
+        - sqs:GetQueueUrl
+        - sqs:DeleteMessage
+        - sqs:ReceiveMessage
+      Resource:
+        - "arn:aws:sqs:${opt:region, self:provider.region}:#{AWS::AccountId}:${self:provider.environment.SEND_SMS_QUEUE_NAME}"
+        - "arn:aws:sqs:${opt:region, self:provider.region}:#{AWS::AccountId}:${self:provider.environment.STORY_PROCESSOR_QUEUE_NAME}"
+    - Effect: "Allow"
+      Action:
+        - sqs:ListQueues
+      Resource:
+        - "arn:aws:sqs:${opt:region, self:provider.region}:*"
+
+package:
+  exclude:
+  - requirements.txt
+  - serverless.yml
+  - README.md
+  - LICENSE.txt
+  - venv/**
+
+functions:
+  smsSender:
+    handler: src/sms/send_sms_handler.handle
+    events:
+      - sqs:
+          arn: "arn:aws:sqs:${opt:region, self:provider.region}:#{AWS::AccountId}:${self:provider.environment.SEND_SMS_QUEUE_NAME}"
+          batchSize: 1
+
+  storyProcessor:
+    handler: src/story/story_processor.handle
+    events:
+    - sqs:
+        arn: "arn:aws:sqs:${opt:region, self:provider.region}:#{AWS::AccountId}:${self:provider.environment.STORY_PROCESSOR_QUEUE_NAME}"
+        batchSize: 1
+
+  smsReceiver:
+    handler: src/sms/receive_sms_handler.handle
+    events:
+      - http:
+          path: inbound
+          method: post
+
+  send:
+    handler: src/message/send_message.send
+    events:
+      - http:
+          path: message
+          method: post
+          cors: true
+
+#  get:
+#    handler: todos/get.get
+#    events:
+#      - http:
+#          path: todos/{id}
+#          method: get
+#          cors: true
+#
+#  update:
+#    handler: todos/update.update
+#    events:
+#      - http:
+#          path: todos/{id}
+#          method: put
+#          cors: true
+#
+#  delete:
+#    handler: todos/delete.delete
+#    events:
+#      - http:
+#          path: todos/{id}
+#          method: delete
+#          cors: true
+
+resources:
+  Resources:
+    UserDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Delete
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: phone
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: phone
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.USER_TABLE}
+    StageDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Delete
+      Properties:
+        AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.STAGE_TABLE}
+    EventDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Delete
+      Properties:
+        AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.EVENT_TABLE}
+    SendSMSQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "SendSMSQueue"
+        VisibilityTimeout: 60
+    StoryProcessorQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "StoryProcessorQueue"
+        VisibilityTimeout: 60
+
+plugins:
+  - serverless-python-requirements
+  - serverless-pseudo-parameters
+  - serverless-prune-plugin
+custom:
+  pythonRequirements:
+    dockerizePip: non-linux
+  prune:
+    automatic: true
+    number: 1
