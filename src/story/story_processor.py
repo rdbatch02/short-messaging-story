@@ -40,7 +40,7 @@ class StoryProcessor:
         message_event = MessageEvent.from_sqs_message(data)
         self.user_stage = self.get_new_stage(message_event)
         message_request = self.generate_message_request()
-        self.message_service.send_message(message_request)
+        self.message_service.send_sms(message_request)
 
     def get_new_stage(self, message: MessageEvent) -> Stage:
         next_stage = self.story_service.find_stage_by_phrase(self.user_stage, message.message)

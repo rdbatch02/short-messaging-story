@@ -19,7 +19,7 @@ def send(event, context):
         message=event['message']
     )
 
-    message_service.send_message(message_request)
+    message_service.send_sms(message_request)
 
     # create a response
     response = {

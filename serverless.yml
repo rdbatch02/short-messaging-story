@@ -4,7 +4,7 @@ frameworkVersion: ">=1.1.0 <2.0.0"
 
 provider:
   name: aws
-  region: us-east-1
+  region: us-east-2
   stage: dev
   runtime: python3.6
   memorySize: 192
@@ -12,6 +12,7 @@ provider:
     STAGE_TABLE: ${self:service}-stage-${opt:stage, self:provider.stage}
     USER_TABLE: ${self:service}-user-${opt:stage, self:provider.stage}
     EVENT_TABLE: ${self:service}-events-${opt:stage, self:provider.stage}
+    SCHEDULE_TABLE: ${self:service}-schedules-${opt:stage, self:provider.stage}
     TWILIO_SID: ${ssm:TWILIO_SID}
     TWILIO_AUTH_TOKEN: ${ssm:TWILIO_AUTH_TOKEN}
     TWILIO_SOURCE_PHONE: ${ssm:TWILIO_SOURCE_PHONE}
@@ -30,6 +31,7 @@ provider:
         - "arn:aws:dynamodb:${opt:region, self:provider.region}:#{AWS::AccountId}:table/${self:provider.environment.STAGE_TABLE}"
         - "arn:aws:dynamodb:${opt:region, self:provider.region}:#{AWS::AccountId}:table/${self:provider.environment.USER_TABLE}"
         - "arn:aws:dynamodb:${opt:region, self:provider.region}:#{AWS::AccountId}:table/${self:provider.environment.EVENT_TABLE}"
+        - "arn:aws:dynamodb:${opt:region, self:provider.region}:#{AWS::AccountId}:table/${self:provider.environment.SCHEDULE_TABLE}"
     - Effect: "Allow"
       Action:
         - sqs:SendMessage
@@ -67,6 +69,11 @@ functions:
     - sqs:
         arn: "arn:aws:sqs:${opt:region, self:provider.region}:#{AWS::AccountId}:${self:provider.environment.STORY_PROCESSOR_QUEUE_NAME}"
         batchSize: 1
+
+  scheduledStoryHandler:
+    handler: src/story/scheduled_story_handler.handle
+    events:
+    - schedule: rate(5 minutes)
 
   smsReceiver:
     handler: src/sms/receive_sms_handler.handle
@@ -153,6 +160,20 @@ resources:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
         TableName: ${self:provider.environment.EVENT_TABLE}
+    ScheduleDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Delete
+      Properties:
+        AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.SCHEDULE_TABLE}
     SendSMSQueue:
       Type: "AWS::SQS::Queue"
       Properties:

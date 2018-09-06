@@ -6,12 +6,14 @@ import os
 
 from src.story.domain.user import User
 from src.story.domain.stage import Stage
+from src.story.domain.schedule_record import ScheduleRecord
 
 
 class StoryClient:
     dyanmodb = boto3.resource('dynamodb')
     user_table = dyanmodb.Table(os.environ['USER_TABLE'])
     stage_table = dyanmodb.Table(os.environ['STAGE_TABLE'])
+    schedule_table = dyanmodb.Table(os.environ['SCHEDULE_TABLE'])
 
     def get_story(self, phone):
         result = self.user_table.get_item(Key={'phone': phone})
@@ -40,3 +42,14 @@ class StoryClient:
 
     def get_child_stages(self, children: List[str]) -> List[Stage]:
         return [Stage.from_dynamo(self.get_stage(stage)) for stage in children]
+
+    def get_scheduled_stages(self) -> List[ScheduleRecord]:
+        results = self.schedule_table.scan()
+        return [ScheduleRecord.from_dynamo(record) for record in results]
+
+    def delete_scheduled_stage(self, id):
+        self.schedule_table.delete_item(
+            Key={
+                'id': id
+            }
+        )

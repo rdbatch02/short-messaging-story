@@ -1,12 +1,16 @@
-from typing import Optional
+from typing import Optional, List
 
 from src.story.domain.user import User
 from src.story.domain.stage import Stage
+from src.story.domain.schedule_record import ScheduleRecord
 from src.story.db.story_client import StoryClient
 
 
 class StoryService:
     client = StoryClient()
+
+    def get_all_scheduled_users(self):
+        pass
 
     def get_story(self, phone: str) -> User:
         return User.from_dynamo(self.client.get_story(phone))
@@ -24,3 +28,9 @@ class StoryService:
             if phrase.casefold() in stage.triggers.phrase:
                 return stage
         return None
+
+    def get_scheduled_records(self) -> List[ScheduleRecord]:
+        return self.client.get_scheduled_stages()
+
+    def delete_schedule_record(self, id: str):
+        return self.client.delete_scheduled_stage(id)
