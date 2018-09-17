@@ -26,6 +26,9 @@ class ScheduledStoryHandler:
             self.message_service.send_story_message(message_event)
             self.story_service.delete_schedule_record(message_event.id)
 
+    def check_starts(self):
+
+
     def generate_message_event(self, schedule_record: ScheduleRecord):
         return MessageEvent(
             id=schedule_record.id,

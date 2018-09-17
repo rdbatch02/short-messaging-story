@@ -15,4 +15,4 @@ class EventClient:
             raise Exception("Failed to save event, missing SID")
             return
 
-        self.event_table.put_item(Item=event.to_json_dict())
+        self.event_table.put_item(Item=event.to_json())

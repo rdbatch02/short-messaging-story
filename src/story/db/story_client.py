@@ -20,6 +20,10 @@ class StoryClient:
         print("Found story in dynamo: " + str(result))
         return result['Item']
 
+    def get_unstarted_stories(self):
+        results = self.user_table.get_item(Key={'started': False})
+        return [User.from_dynamo(user) for user in results]
+
     def get_stage(self, stage_id):
         result = self.stage_table.get_item(Key={'id': stage_id})
         print("Found stage in dynamo: " + str(result))
@@ -46,6 +50,9 @@ class StoryClient:
     def get_scheduled_stages(self) -> List[ScheduleRecord]:
         results = self.schedule_table.scan()
         return [ScheduleRecord.from_dynamo(record) for record in results]
+
+    def insert_schedule_record(self, record: ScheduleRecord):
+        self.schedule_table.put_item(Item=record.to_json())
 
     def delete_scheduled_stage(self, id):
         self.schedule_table.delete_item(

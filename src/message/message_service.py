@@ -19,4 +19,4 @@ class MessageService:
 
     def send_story_message(self, message_event: MessageEvent):
         queue = self.sqs.get_queue_by_name(QueueName=self.processor_queue_name)
-        queue.send_message(MessageBody=json.dumps(message_event.to_json_dict()))
+        queue.send_message(MessageBody=json.dumps(message_event.to_json()))

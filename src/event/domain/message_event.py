@@ -2,6 +2,7 @@ import json
 from dateutil import parser
 from datetime import datetime
 from dataclasses import dataclass
+from dataclasses_json import DataClassJsonMixin
 
 from twilio.rest.api.v2010.account.message import MessageInstance
 
@@ -10,7 +11,7 @@ from src.event.domain.source import Source
 
 
 @dataclass
-class MessageEvent:
+class MessageEvent(DataClassJsonMixin):
     id: str = None
     phone: str = None
     direction: Direction = None
@@ -47,13 +48,3 @@ class MessageEvent:
             timestamp=parser.parse(sqs_data['timestamp']),
             source=Source.from_str(sqs_data['source'])
         )
-
-    def to_json_dict(self):
-        return {
-            'id': self.id,
-            'phone': self.phone,
-            'direction': str(self.direction),
-            'message': self.message,
-            'timestamp': str(self.timestamp),
-            'source': str(self.source)
-        }

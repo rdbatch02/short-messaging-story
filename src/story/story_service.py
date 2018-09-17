@@ -9,8 +9,8 @@ from src.story.db.story_client import StoryClient
 class StoryService:
     client = StoryClient()
 
-    def get_all_scheduled_users(self):
-        pass
+    def get_pending_starts(self) -> List[User]:
+        return self.client.get_unstarted_stories()
 
     def get_story(self, phone: str) -> User:
         return User.from_dynamo(self.client.get_story(phone))
@@ -18,7 +18,7 @@ class StoryService:
     def get_stage(self, stage_id: str) -> Stage:
         return Stage.from_dynamo(self.client.get_stage(stage_id))
 
-    def update_stage(self, user: User, stage: Stage):
+    def update_stage(self, user: User, stage: Stage): # TODO: Cover case where next stage is a schedule gate
         return self.client.set_stage(user, stage.id)
 
     def find_stage_by_phrase(self, stage: Stage, phrase: str) -> Optional[Stage]:
@@ -31,6 +31,9 @@ class StoryService:
 
     def get_scheduled_records(self) -> List[ScheduleRecord]:
         return self.client.get_scheduled_stages()
+
+    def set_schedule_record(self, record: ScheduleRecord):
+        return self.client.insert_schedule_record(record)
 
     def delete_schedule_record(self, id: str):
         return self.client.delete_scheduled_stage(id)

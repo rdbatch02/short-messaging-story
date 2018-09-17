@@ -90,30 +90,6 @@ functions:
           method: post
           cors: true
 
-#  get:
-#    handler: todos/get.get
-#    events:
-#      - http:
-#          path: todos/{id}
-#          method: get
-#          cors: true
-#
-#  update:
-#    handler: todos/update.update
-#    events:
-#      - http:
-#          path: todos/{id}
-#          method: put
-#          cors: true
-#
-#  delete:
-#    handler: todos/delete.delete
-#    events:
-#      - http:
-#          path: todos/{id}
-#          method: delete
-#          cors: true
-
 resources:
   Resources:
     UserDynamoDbTable:
@@ -121,13 +97,15 @@ resources:
       DeletionPolicy: Delete
       Properties:
         AttributeDefinitions:
-          -
-            AttributeName: phone
+          - AttributeName: phone
             AttributeType: S
+          - AttributeName: started
+            AttributeType: BOOL
         KeySchema:
-          -
-            AttributeName: phone
+          - AttributeName: phone
             KeyType: HASH
+          - AttributeName: started
+            KeyType: RANGE
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1

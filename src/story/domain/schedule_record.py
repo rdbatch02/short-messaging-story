@@ -1,12 +1,13 @@
 from uuid import uuid4
 
 from dataclasses import dataclass
+from dataclasses_json import DataClassJsonMixin
 from dateutil import parser
 from datetime import datetime
 
 
 @dataclass
-class ScheduleRecord:
+class ScheduleRecord(DataClassJsonMixin):
     id: str = str(uuid4())
     phone: str = None
     trigger_timestamp: datetime = None
